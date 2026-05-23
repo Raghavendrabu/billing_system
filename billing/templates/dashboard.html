@@ -106,6 +106,7 @@
                                 <th class="pb-3 text-xs uppercase tracking-wider">Total Amount</th>
                                 <th class="pb-3 text-xs uppercase tracking-wider">Status</th>
                                 <th class="pb-3 text-xs uppercase tracking-wider">Method</th>
+                                <th class="pb-3 text-xs uppercase tracking-wider text-center">Share</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-800 divide-opacity-50">
@@ -121,10 +122,19 @@
                                     </span>
                                 </td>
                                 <td class="py-3 text-xs text-gray-400"><i class="fa-solid fa-credit-card mr-1 text-[10px] text-gray-500"></i> {{ inv.payment_method }}</td>
+                                <td class="py-3 text-center">
+                                    {% if inv.customer and inv.customer.phone %}
+                                    <a href="https://wa.me/{{ inv.whatsapp_phone }}?text={{ inv.whatsapp_text|urlencode }}" target="_blank" class="text-emerald-400 hover:text-emerald-300 transition-all transform hover:scale-110 inline-block" title="Send WhatsApp Invoice">
+                                        <i class="fa-brands fa-whatsapp text-lg"></i>
+                                    </a>
+                                    {% else %}
+                                    <span class="text-gray-650 text-xs">—</span>
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="6" class="py-4 text-center text-gray-500">No transactions recorded yet.</td>
+                                <td colspan="7" class="py-4 text-center text-gray-500">No transactions recorded yet.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -197,7 +207,7 @@
                                         <select :name="'item_product_' + index" x-model="item.product_sku" @change="updateItemDetails(index)" class="w-full bg-transparent text-xs text-gray-200 focus:outline-none bg-darkblue-900 rounded p-1 border border-gray-800" required>
                                             <option class="bg-gray-900 text-white" value="">-- Choose Product --</option>
                                             {% for prod in products %}
-                                            <option class="bg-gray-900 text-white" value="{{ prod.sku }}" data-rate="{{ prod.rate }}" data-tax="{{ prod.tax_code }}">{{ prod.name }} (₹{{ prod.rate }})\u003c/option>
+                                            <option class="bg-gray-900 text-white" value="{{ prod.sku }}" data-rate="{{ prod.rate }}" data-tax="{{ prod.tax_code }}">{{ prod.name }} (₹{{ prod.rate }})</option>
                                             {% endfor %}
                                         </select>
                                     </div>

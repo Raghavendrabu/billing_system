@@ -21,4 +21,5 @@ urlpatterns = [
     # Reports Endpoints
     path('reports/', lambda r: render(r, 'reports.html', {'active_page': 'reports'}), name='reports'),
     path('reports/generate/', views.generate_pdf_report_view, name='generate_pdf_report'),
+    path('invoice/<int:invoice_id>/pdf/', views.generate_invoice_pdf_view, name='generate_invoice_pdf'),
 ]

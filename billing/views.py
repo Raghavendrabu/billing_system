@@ -531,3 +531,135 @@ def generate_pdf_report_view(request):
     # Return File
     buffer.seek(0)
     return FileResponse(buffer, as_attachment=False, filename=f"smartbill_{report_type}_report.pdf")
+
+def generate_invoice_pdf_view(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    buffer = io.BytesIO()
+    
+    # Setup document
+    doc = SimpleDocTemplate(
+        buffer, 
+        pagesize=letter, 
+        rightMargin=0.5*inch, 
+        leftMargin=0.5*inch, 
+        topMargin=0.75*inch, 
+        bottomMargin=0.75*inch
+    )
+    
+    styles = getSampleStyleSheet()
+    
+    style_title = ParagraphStyle(
+        'InvoiceTitle',
+        parent=styles['Heading1'],
+        fontName='Helvetica-Bold',
+        fontSize=22,
+        textColor=colors.HexColor('#1e1b4b'),
+        spaceAfter=4
+    )
+    
+    style_subtitle = ParagraphStyle(
+        'InvoiceSub',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=9,
+        textColor=colors.HexColor('#6366f1'),
+        spaceAfter=12
+    )
+    
+    style_normal = styles['Normal']
+    style_bold = ParagraphStyle('BoldText', parent=style_normal, fontName='Helvetica-Bold')
+    
+    elements = []
+    
+    # 1. Header Banner
+    elements.append(Paragraph("TAX INVOICE", style_title))
+    elements.append(Paragraph("SMART BILLING PVT LTD | GSTIN: 09AAAAA1111A1Z1", style_subtitle))
+    elements.append(Spacer(1, 10))
+    
+    # 2. Metadata Columns (Invoice details & Bill To)
+    meta_data = [
+        [
+            Paragraph("<b>INVOICE DETAILS:</b>", style_normal),
+            Paragraph("<b>BILL TO:</b>", style_normal)
+        ],
+        [
+            Paragraph(f"Invoice No: <b>{invoice.invoice_number}</b>", style_normal),
+            Paragraph(f"Name: <b>{invoice.customer.name if invoice.customer else 'Retail Walk-in'}</b>", style_normal)
+        ],
+        [
+            Paragraph(f"Date: {invoice.created_at.strftime('%d %b %Y %H:%i')}", style_normal),
+            Paragraph(f"Phone: {invoice.customer.phone if invoice.customer else 'N/A'}", style_normal)
+        ],
+        [
+            Paragraph(f"Payment Method: {invoice.payment_method}", style_normal),
+            Paragraph(f"Email: {invoice.customer.email if invoice.customer and invoice.customer.email else 'N/A'}", style_normal)
+        ]
+    ]
+    meta_table = Table(meta_data, colWidths=[250, 250])
+    meta_table.setStyle(TableStyle([
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ('LINEBELOW', (0,0), (-1,0), 1, colors.HexColor('#e5e7eb')),
+    ]))
+    elements.append(meta_table)
+    elements.append(Spacer(1, 20))
+    
+    # 3. Items Table
+    header_color = colors.HexColor('#4f46e5')
+    line_color = colors.HexColor('#e5e7eb')
+    
+    items_data = [['Product Name', 'SKU', 'Qty', 'Unit Price', 'GST Rate', 'Tax Amount', 'Total Price']]
+    for item in invoice.items.all():
+        items_data.append([
+            item.product.name if item.product else 'Deleted Product',
+            item.product.sku if item.product else 'N/A',
+            str(item.quantity),
+            f"Rs. {item.unit_price:.2f}",
+            f"{item.tax_rate}%",
+            f"Rs. {item.tax_amount:.2f}",
+            f"Rs. {item.total_price:.2f}"
+        ])
+        
+    t = Table(items_data, colWidths=[150, 70, 40, 80, 50, 50, 60])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), header_color),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 8),
+        ('GRID', (0,0), (-1,-1), 0.5, line_color),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#f9fafb')]),
+        ('PADDING', (0,0), (-1,-1), 6),
+    ]))
+    elements.append(t)
+    elements.append(Spacer(1, 15))
+    
+    # 4. Math Breakdown summary block
+    totals_data = [
+        [Paragraph("", style_normal), Paragraph("<b>Subtotal Base:</b>", style_normal), Paragraph(f"Rs. {invoice.subtotal:.2f}", style_normal)],
+        [Paragraph("", style_normal), Paragraph("<b>CGST collected (9%):</b>", style_normal), Paragraph(f"Rs. {invoice.cgst:.2f}", style_normal)],
+        [Paragraph("", style_normal), Paragraph("<b>SGST collected (9%):</b>", style_normal), Paragraph(f"Rs. {invoice.sgst:.2f}", style_normal)],
+        [Paragraph("", style_normal), Paragraph("<b>Discount Applied:</b>", style_normal), Paragraph(f"-Rs. {invoice.discount_amount:.2f}", style_normal)],
+        [Paragraph("", style_normal), Paragraph("<b>Grand Net Total:</b>", style_bold), Paragraph(f"Rs. {invoice.total_amount:.2f}", style_bold)]
+    ]
+    totals_table = Table(totals_data, colWidths=[250, 150, 100])
+    totals_table.setStyle(TableStyle([
+        ('ALIGN', (1,0), (-1,-1), 'RIGHT'),
+        ('BOTTOMPADDING', (1,0), (-1,-1), 4),
+        ('LINEBELOW', (1,4), (-1,4), 1, colors.HexColor('#4f46e5')),
+    ]))
+    elements.append(totals_table)
+    elements.append(Spacer(1, 30))
+    
+    # 5. Footer terms
+    elements.append(Paragraph("<b>Terms & Conditions:</b>", style_bold))
+    elements.append(Paragraph("1. Goods once sold cannot be taken back or exchanged.", style_normal))
+    elements.append(Paragraph("2. This is a computer-generated tax invoice and requires no physical signatures.", style_normal))
+    elements.append(Spacer(1, 20))
+    
+    elements.append(Paragraph("<font size='10' color='#6366f1'><b>Thank you for your business! Visit us again.</b></font>", style_bold))
+    
+    # Build Document
+    doc.build(elements)
+    buffer.seek(0)
+    return FileResponse(buffer, as_attachment=False, filename=f"Invoice_{invoice.invoice_number}.pdf")

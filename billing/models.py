@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from datetime import timedelta
 
 class Product(models.Model):
     sku = models.CharField(max_length=50, unique=True, primary_key=True)
@@ -59,6 +60,39 @@ class Invoice(models.Model):
     def sgst(self):
         # SGST is half of tax_amount
         return self.tax_amount / 2
+
+    @property
+    def whatsapp_phone(self):
+        if not self.customer or not self.customer.phone:
+            return ""
+        # Strip all non-digit characters
+        phone_digits = "".join(c for c in self.customer.phone if c.isdigit())
+        # If it doesn't start with 91 and has 10 digits, prepend 91 (for India)
+        if len(phone_digits) == 10:
+            phone_digits = "91" + phone_digits
+        return phone_digits
+
+    @property
+    def whatsapp_text(self):
+        date_str = self.created_at.strftime('%d %b %Y')
+        due_date = self.created_at + timedelta(days=10)
+        due_str = due_date.strftime('%d %b %Y')
+        
+        # Calculate earned points (1 point per 10 INR spent)
+        earned_points = int(self.total_amount / 10)
+        
+        # Build text matching your layout exactly
+        text = f"📄 📝 New Invoice from Smart Billing\n\n"
+        text += f"📌 Invoice #: {self.invoice_number}\n"
+        text += f"📅 Date: {date_str}\n"
+        text += f"💰 Amount: ₹{self.total_amount:.2f}\n"
+        text += f"⏰ Due Date: {due_str}\n\n"
+        text += f"🔗 Payment Link: http://127.0.0.1:8000/invoice/{self.id}/pdf/\n\n"
+        text += f"📎 Invoice_{self.invoice_number}.pdf\n"
+        text += f"[Document] 245 KB\n\n"
+        text += f"⭐ Loyalty Points: {earned_points} earned\n\n"
+        text += f"🙏 Thank you for your business"
+        return text
 
 class InvoiceItem(models.Model):
     invoice = models.ForeignKey(Invoice, related_name='items', on_delete=models.CASCADE)
