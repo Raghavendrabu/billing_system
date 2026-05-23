@@ -275,65 +275,65 @@
                             <i class="fa-solid fa-receipt"></i> <span>Proceed Checkout</span>
                         </button>
                     </div>
+
+                    <!-- Scan to Pay & Invoice Preview Modal (Nested inside Form) -->
+                    <div x-show="checkoutModalOpen" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4 backdrop-blur-sm" x-cloak>
+                        <div class="glass-panel max-w-md w-full rounded-3xl p-6 border border-indigo-500 border-opacity-20 shadow-2xl space-y-6 transform scale-100 transition-all duration-350">
+                            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                                <h3 class="text-lg font-bold text-gray-100 flex items-center"><i class="fa-solid fa-cash-register text-indigo-400 mr-2"></i> Cashier POS checkout</h3>
+                                <button type="button" @click="checkoutModalOpen = false" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+                            </div>
+                            
+                            <!-- Invoice Details -->
+                            <div class="space-y-3 bg-darkblue-800 bg-opacity-40 p-4 rounded-2xl border border-gray-800 text-xs">
+                                <h4 class="font-bold text-gray-300 text-center uppercase tracking-widest text-[10px]">Tax Invoice Preview</h4>
+                                <div class="divide-y divide-gray-800">
+                                    <div class="py-2 flex justify-between">
+                                        <span class="text-gray-500">Billing Date:</span>
+                                        <span class="text-gray-300 font-mono">{% now "Y-m-d H:i" %}</span>
+                                    </div>
+                                    <div class="py-2 flex justify-between">
+                                        <span class="text-gray-500">Customer Class:</span>
+                                        <span class="text-gray-300 font-bold" x-text="customerId ? 'Registered Client' : 'Walk-in Retailer'"></span>
+                                    </div>
+                                    <div class="py-2 flex justify-between">
+                                        <span class="text-gray-500">Payment Channel:</span>
+                                        <span class="text-indigo-400 font-bold uppercase" x-text="paymentMethod"></span>
+                                    </div>
+                                    <div class="py-2 flex justify-between text-sm font-extrabold border-t border-gray-800">
+                                        <span class="text-gray-200">Grand Bill Amount:</span>
+                                        <span class="text-emerald-400" x-text="'₹' + getTotal().toFixed(2)"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Interactive QR Scan code (rendered only for UPI/Digital checkouts) -->
+                            <div x-show="paymentMethod === 'UPI'" class="flex flex-col items-center justify-center py-4 bg-white rounded-2xl p-4 shadow-inner">
+                                <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=7483654078@ptyes%26pn=Smart%20Billing%26am=' + getTotal() + '%26cu=INR'" alt="UPI Pay Code" class="w-36 h-36 border-4 border-white mb-2">
+                                <span class="text-[10px] text-gray-500 font-bold tracking-widest uppercase">SCAN TO PAY VIA UPI</span>
+                                <span class="text-xs text-indigo-900 font-extrabold mt-1" x-text="'Amt: ₹' + getTotal().toFixed(2)"></span>
+                            </div>
+
+                            <div x-show="paymentMethod !== 'UPI'" class="flex flex-col items-center justify-center py-6 text-center text-gray-400">
+                                <i class="fa-solid {% if paymentMethod == 'Cash' %}fa-money-bill-wave text-emerald-400{% elif paymentMethod == 'Card' %}fa-credit-card text-indigo-400{% else %}fa-star text-amber-400{% endif %} text-5xl mb-3"></i>
+                                <h4 class="font-extrabold text-sm text-gray-200" x-text="paymentMethod + ' checkout pending confirmation'"></h4>
+                                <p class="text-xs text-gray-500 mt-1" x-text="'Collect ₹' + getTotal().toFixed(2) + ' from the client'"></p>
+                            </div>
+
+                            <!-- Confirm Buttons -->
+                            <div class="flex space-x-3 pt-2">
+                                <button type="button" @click="checkoutModalOpen = false" class="flex-1 bg-gray-800 text-gray-300 font-bold py-2.5 rounded-xl text-xs hover:bg-gray-700 transition-colors">Cancel</button>
+                                <button type="submit" @click="checkoutModalOpen = false" class="flex-1 gradient-indigo text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition-all-custom hover:opacity-90 flex items-center justify-center space-x-2">
+                                    <i class="fa-solid fa-circle-check"></i> <span>Authorize Payment</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- Scan to Pay & Invoice Preview Modal -->
-    <div x-show="checkoutModalOpen" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4 backdrop-blur-sm" x-cloak>
-        <div class="glass-panel max-w-md w-full rounded-3xl p-6 border border-indigo-500 border-opacity-20 shadow-2xl space-y-6 transform scale-100 transition-all duration-350">
-            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
-                <h3 class="text-lg font-bold text-gray-100 flex items-center"><i class="fa-solid fa-cash-register text-indigo-400 mr-2"></i> Cashier POS checkout</h3>
-                <button type="button" @click="checkoutModalOpen = false" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            
-            <!-- Invoice Details -->
-            <div class="space-y-3 bg-darkblue-800 bg-opacity-40 p-4 rounded-2xl border border-gray-800 text-xs">
-                <h4 class="font-bold text-gray-300 text-center uppercase tracking-widest text-[10px]">Tax Invoice Preview</h4>
-                <div class="divide-y divide-gray-800">
-                    <div class="py-2 flex justify-between">
-                        <span class="text-gray-500">Billing Date:</span>
-                        <span class="text-gray-300 font-mono">{% now "Y-m-d H:i" %}</span>
-                    </div>
-                    <div class="py-2 flex justify-between">
-                        <span class="text-gray-500">Customer Class:</span>
-                        <span class="text-gray-300 font-bold" x-text="customerId ? 'Registered Client' : 'Walk-in Retailer'"></span>
-                    </div>
-                    <div class="py-2 flex justify-between">
-                        <span class="text-gray-500">Payment Channel:</span>
-                        <span class="text-indigo-400 font-bold uppercase" x-text="paymentMethod"></span>
-                    </div>
-                    <div class="py-2 flex justify-between text-sm font-extrabold border-t border-gray-800">
-                        <span class="text-gray-200">Grand Bill Amount:</span>
-                        <span class="text-emerald-400" x-text="'₹' + getTotal().toFixed(2)"></span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Interactive QR Scan code (rendered only for UPI/Digital checkouts) -->
-            <div x-show="paymentMethod === 'UPI'" class="flex flex-col items-center justify-center py-4 bg-white rounded-2xl p-4 shadow-inner">
-                <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=7483654078@ptyes%26pn=Smart%20Billing%26am=' + getTotal() + '%26cu=INR'" alt="UPI Pay Code" class="w-36 h-36 border-4 border-white mb-2">
-                <span class="text-[10px] text-gray-500 font-bold tracking-widest uppercase">SCAN TO PAY VIA UPI</span>
-                <span class="text-xs text-indigo-900 font-extrabold mt-1" x-text="'Amt: ₹' + getTotal().toFixed(2)"></span>
-            </div>
-
-            <div x-show="paymentMethod !== 'UPI'" class="flex flex-col items-center justify-center py-6 text-center text-gray-400">
-                <i class="fa-solid {% if paymentMethod == 'Cash' %}fa-money-bill-wave text-emerald-400{% elif paymentMethod == 'Card' %}fa-credit-card text-indigo-400{% else %}fa-star text-amber-400{% endif %} text-5xl mb-3"></i>
-                <h4 class="font-extrabold text-sm text-gray-200" x-text="paymentMethod + ' checkout pending confirmation'"></h4>
-                <p class="text-xs text-gray-500 mt-1" x-text="'Collect ₹' + getTotal().toFixed(2) + ' from the client'"></p>
-            </div>
-
-            <!-- Confirm Buttons -->
-            <div class="flex space-x-3 pt-2">
-                <button type="button" @click="checkoutModalOpen = false" class="flex-1 bg-gray-800 text-gray-300 font-bold py-2.5 rounded-xl text-xs hover:bg-gray-700 transition-colors">Cancel</button>
-                <button type="button" @click="submitInvoice()" class="flex-1 gradient-indigo text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition-all-custom hover:opacity-90 flex items-center justify-center space-x-2">
-                    <i class="fa-solid fa-circle-check"></i> <span>Authorize Payment</span>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <script>
     // Chart Configurations
@@ -463,13 +463,7 @@
             },
 
             submitInvoice() {
-                // Submit the form using HTMX
                 this.checkoutModalOpen = false;
-                const form = document.getElementById('invoice-creator-form');
-                if (form) {
-                    // We trigger HTMX request manually or programmatically
-                    htmx.trigger(form, 'submit');
-                }
             }
         };
     }

@@ -41,7 +41,7 @@ def handle_invoice_payment(sender, instance, created, **kwargs):
                 )
         
         # Update lifetime value
-        customer.lifetime_value += instance.total_amount
+        customer.lifetime_value += Decimal(str(instance.total_amount))
         customer.save()
 
 @receiver(post_save, sender=InvoiceItem)

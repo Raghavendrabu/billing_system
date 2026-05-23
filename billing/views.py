@@ -6,6 +6,7 @@ from django.db.models import Sum, Avg, Q
 from django.utils import timezone
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
+from decimal import Decimal
 
 # Import models
 from .models import Product, Customer, Invoice, InvoiceItem, TransactionAlert, LoyaltyTransaction
@@ -216,13 +217,13 @@ def create_invoice_view(request):
     if request.method == 'POST':
         customer_id = request.POST.get('customer')
         payment_method = request.POST.get('payment_method', 'UPI')
-        discount = float(request.POST.get('discount') or 0.0)
+        discount = Decimal(request.POST.get('discount') or '0.0')
         items_count = int(request.POST.get('items_count') or 0)
         
-        # Calculate matching transaction figures
-        subtotal = float(request.POST.get('subtotal_val') or 0.0)
-        tax = float(request.POST.get('tax_val') or 0.0)
-        total = float(request.POST.get('total_val') or 0.0)
+        # Calculate matching transaction figures using Decimal
+        subtotal = Decimal(request.POST.get('subtotal_val') or '0.0')
+        tax = Decimal(request.POST.get('tax_val') or '0.0')
+        total = Decimal(request.POST.get('total_val') or '0.0')
         
         # Customer bindings
         customer = None
@@ -251,16 +252,22 @@ def create_invoice_view(request):
             
             if prod_sku:
                 prod = get_object_or_404(Product, sku=prod_sku)
-                item_subtotal = float(prod.rate) * qty
-                item_tax = item_subtotal * (float(prod.tax_code) / 100.0)
+                
+                # Perform precise Decimal calculations
+                rate_decimal = Decimal(str(prod.rate))
+                tax_code_decimal = Decimal(str(prod.tax_code))
+                qty_decimal = Decimal(str(qty))
+                
+                item_subtotal = rate_decimal * qty_decimal
+                item_tax = item_subtotal * (tax_code_decimal / Decimal('100.0'))
                 item_total = item_subtotal + item_tax
                 
                 InvoiceItem.objects.create(
                     invoice=invoice,
                     product=prod,
                     quantity=qty,
-                    unit_price=prod.rate,
-                    tax_rate=prod.tax_code,
+                    unit_price=rate_decimal,
+                    tax_rate=tax_code_decimal,
                     tax_amount=item_tax,
                     total_price=item_total
                 )
@@ -272,6 +279,10 @@ def create_invoice_view(request):
         )
         messages.success(request, f"Invoice {inv_number} created successfully.")
         
+    if request.headers.get('HX-Request'):
+        response = HttpResponse()
+        response['HX-Redirect'] = '/'
+        return response
     return redirect('dashboard')
 
 def generate_pdf_report_view(request):
