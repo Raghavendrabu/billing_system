@@ -1,0 +1,68 @@
+<table class="w-full text-left text-sm border-collapse">
+    <thead>
+        <tr class="border-b border-gray-800 text-gray-500 font-semibold bg-darkblue-800 bg-opacity-25">
+            <th class="p-4 text-xs uppercase tracking-wider">Product Details</th>
+            <th class="p-4 text-xs uppercase tracking-wider">SKU</th>
+            <th class="p-4 text-xs uppercase tracking-wider">Rate</th>
+            <th class="p-4 text-xs uppercase tracking-wider">Tax Code</th>
+            <th class="p-4 text-xs uppercase tracking-wider">Current Stock</th>
+            <th class="p-4 text-xs uppercase tracking-wider">Status</th>
+            <th class="p-4 text-xs uppercase tracking-wider text-right">Actions</th>
+        </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-800 divide-opacity-50">
+        {% for prod in products %}
+        <tr class="hover:bg-gray-850 hover:bg-opacity-35 transition-colors">
+            <!-- Product Name -->
+            <td class="p-4">
+                <div class="flex items-center space-x-3">
+                    <div class="p-2 bg-indigo-950 bg-opacity-40 text-indigo-400 border border-indigo-900 border-opacity-40 rounded-lg">
+                        <i class="fa-solid fa-box text-sm"></i>
+                    </div>
+                    <div>
+                        <span class="font-bold text-gray-200 block">{{ prod.name }}</span>
+                    </div>
+                </div>
+            </td>
+            
+            <!-- SKU -->
+            <td class="p-4 font-mono text-xs text-indigo-400 font-semibold">{{ prod.sku }}</td>
+            
+            <!-- Rate -->
+            <td class="p-4 font-extrabold text-gray-200">₹{{ prod.rate }}</td>
+            
+            <!-- Tax Code -->
+            <td class="p-4 text-xs text-gray-400"><span class="px-2 py-0.5 bg-gray-800 rounded font-semibold text-[10px]">{{ prod.tax_code }}% GST</span></td>
+            
+            <!-- Current Stock (with dynamic indicator colors) -->
+            <td class="p-4">
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold font-mono {% if prod.current_stock <= 5 %} bg-rose-500 bg-opacity-10 text-rose-400 border border-rose-900 border-opacity-30 {% elif prod.current_stock <= 15 %} bg-amber-500 bg-opacity-10 text-amber-400 border border-amber-900 border-opacity-30 {% else %} bg-emerald-500 bg-opacity-10 text-emerald-400 border border-emerald-900 border-opacity-30 {% endif %}">
+                    {{ prod.current_stock }} units
+                </span>
+            </td>
+            
+            <!-- Listing Status -->
+            <td class="p-4">
+                <span class="flex items-center text-xs font-medium {% if prod.is_active %} text-emerald-400 {% else %} text-gray-500 {% endif %}">
+                    <span class="w-1.5 h-1.5 rounded-full mr-2 {% if prod.is_active %} bg-emerald-400 animate-pulse {% else %} bg-gray-600 {% endif %}"></span>
+                    {% if prod.is_active %}Active{% else %}Archived{% endif %}
+                </span>
+            </td>
+            
+            <!-- Actions -->
+            <td class="p-4 text-right space-x-2">
+                <button type="button" @click="openStockModal('{{ prod.sku }}', '{{ prod.name|escapejs }}', {{ prod.current_stock }})" class="px-2.5 py-1.5 bg-gray-850 hover:bg-gray-800 border border-gray-800 text-gray-300 hover:text-white rounded-lg text-xs transition-colors" title="Adjust Stock">
+                    <i class="fa-solid fa-cubes mr-1 text-[10px] text-gray-400"></i> Stock
+                </button>
+                <button type="button" @click="openEditModal('{{ prod.sku }}', '{{ prod.name|escapejs }}', '{{ prod.rate }}', '{{ prod.tax_code }}', '{{ prod.is_active }}')" class="px-2.5 py-1.5 bg-indigo-950 bg-opacity-35 hover:bg-indigo-900 border border-indigo-900 border-opacity-40 text-indigo-400 hover:text-indigo-300 rounded-lg text-xs transition-colors" title="Edit Product">
+                    <i class="fa-regular fa-pen-to-square mr-1 text-[10px]"></i> Edit
+                </button>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="7" class="p-6 text-center text-gray-500">No inventory products found matching search filters.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

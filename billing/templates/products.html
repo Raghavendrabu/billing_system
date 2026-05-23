@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Product Management | Smart Billing System v1.1{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="productManager()">
+    
+    <!-- Header Controls -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-800 pb-4">
+        <div>
+            <h2 class="text-2xl font-extrabold text-white font-heading">Product Inventory Directory</h2>
+            <p class="text-xs text-gray-500 mt-1">Manage standard stock listings, rates, and calculate GST rates</p>
+        </div>
+        <div>
+            <button @click="openAddModal()" class="gradient-indigo text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md transition-all-custom transform hover:translate-y-[-1px] flex items-center space-x-2">
+                <i class="fa-solid fa-plus"></i> <span>Add New Product</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats & Search Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Search and Filter (col-span-3) -->
+        <div class="lg:col-span-3 glass-panel p-4 rounded-2xl flex flex-col md:flex-row md:items-center gap-4">
+            <div class="relative flex-1">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
+                    <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                </span>
+                <input type="text" id="search-input" name="search" hx-get="{% url 'products' %}" hx-target="#products-table-container" hx-trigger="keyup changed delay:300ms" placeholder="Search by Product Name or SKU..." class="w-full glass-panel border border-gray-800 text-gray-200 text-xs rounded-xl pl-9 pr-4 py-2.5 focus:outline-none focus:border-indigo-500 bg-darkblue-800">
+            </div>
+            
+            <div class="flex items-center space-x-3">
+                <select name="stock_filter" hx-get="{% url 'products' %}" hx-target="#products-table-container" hx-trigger="change" class="glass-panel border border-gray-800 text-gray-300 text-xs rounded-xl px-3 py-2.5 bg-darkblue-800 focus:outline-none">
+                    <option class="bg-gray-900 text-white" value="all">All Inventory Statuses</option>
+                    <option class="bg-gray-900 text-white" value="low">Low Stock (under 15)</option>
+                    <option class="bg-gray-900 text-white" value="out">Out of Stock (0)</option>
+                    <option class="bg-gray-900 text-white" value="active">Active Listings</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Inventory Summary Card (col-span-1) -->
+        <div class="glass-panel p-4 rounded-2xl flex items-center justify-between border-l-4 border-indigo-500">
+            <div>
+                <h4 class="text-xs text-gray-500 font-bold uppercase tracking-wider">Product Inventory Summary</h4>
+                <div class="flex items-baseline space-x-2 mt-1">
+                    <span class="text-2xl font-extrabold text-white">{{ products|length }}</span>
+                    <span class="text-xs text-gray-400">total listings</span>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="text-xs text-rose-400 font-bold flex items-center justify-end"><span class="w-1.5 h-1.5 bg-rose-400 rounded-full mr-1.5 animate-pulse"></span> {{ low_stock_count }} Low</p>
+                <p class="text-[10px] text-gray-500 font-semibold uppercase mt-0.5">Alert Limit: 15 qty</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products Table Container -->
+    <div id="products-table-container" class="glass-panel rounded-2xl overflow-hidden shadow-lg border border-gray-800">
+        {% include 'partials/products_table.html' %}
+    </div>
+
+    <!-- Add/Edit Product Modal -->
+    <div x-show="modalOpen" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4 backdrop-blur-sm" x-cloak>
+        <div class="glass-panel max-w-md w-full rounded-3xl p-6 border border-indigo-500 border-opacity-20 shadow-2xl space-y-5">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                <h3 class="text-lg font-bold text-gray-100 flex items-center">
+                    <i class="fa-solid fa-box-open text-indigo-400 mr-2"></i> 
+                    <span x-text="editMode ? 'Edit Product Details' : 'Add New Inventory Product'"></span>
+                </h3>
+                <button type="button" @click="modalOpen = false" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form id="product-form" hx-post="{% url 'save_product' %}" hx-target="body" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="sku_original" x-model="skuOriginal">
+                <input type="hidden" name="action" :value="editMode ? 'edit' : 'add'">
+
+                <!-- SKU -->
+                <div class="space-y-1">
+                    <label class="text-xs text-gray-400 font-semibold block">SKU Code</label>
+                    <input type="text" name="sku" x-model="productData.sku" :disabled="editMode" placeholder="e.g., SKU0091" class="w-full glass-panel border border-gray-800 text-gray-200 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-indigo-500 bg-darkblue-800 disabled:opacity-50" required>
+                </div>
+
+                <!-- Product Name -->
+                <div class="space-y-1">
+                    <label class="text-xs text-gray-400 font-semibold block">Product Name</label>
+                    <input type="text" name="name" x-model="productData.name" placeholder="e.g., Wireless Mouse" class="w-full glass-panel border border-gray-800 text-gray-200 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-indigo-500 bg-darkblue-800" required>
+                </div>
+
+                <!-- Base Rate & GST -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1">
+                        <label class="text-xs text-gray-400 font-semibold block">Base Rate (₹)</label>
+                        <input type="number" name="rate" x-model="productData.rate" step="0.01" min="0" placeholder="0.00" class="w-full glass-panel border border-gray-800 text-gray-200 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-indigo-500 bg-darkblue-800" required>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-xs text-gray-400 font-semibold block">GST Rate (%)</label>
+                        <select name="tax_code" x-model="productData.tax_code" class="w-full glass-panel border border-gray-800 text-gray-200 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-indigo-500 bg-darkblue-800">
+                            <option class="bg-gray-900 text-white" value="18.00">18% Standard GST</option>
+                            <option class="bg-gray-900 text-white" value="12.00">12% Intermediate</option>
+                            <option class="bg-gray-900 text-white" value="5.00">5% Essential</option>
+                            <option class="bg-gray-900 text-white" value="28.00">28% Luxury</option>
+                            <option class="bg-gray-900 text-white" value="0.00">0% Exempt</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Initial stock -->
+                <div class="grid grid-cols-2 gap-4" x-show="!editMode">
+                    <div class="space-y-1">
+                        <label class="text-xs text-gray-400 font-semibold block">Opening Stock (Qty)</label>
+                        <input type="number" name="current_stock" x-model="productData.current_stock" min="0" placeholder="0" class="w-full glass-panel border border-gray-800 text-gray-200 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-indigo-500 bg-darkblue-800">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-xs text-gray-400 font-semibold block">Status</label>
+                        <select name="is_active" x-model="productData.is_active" class="w-full glass-panel border border-gray-800 text-gray-200 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-indigo-500 bg-darkblue-800">
+                            <option class="bg-gray-900 text-white" value="true">Active Listing</option>
+                            <option class="bg-gray-900 text-white" value="false">Archived / Inactive</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="flex space-x-3 pt-3">
+                    <button type="button" @click="modalOpen = false" class="flex-1 bg-gray-800 text-gray-300 font-bold py-2.5 rounded-xl text-xs hover:bg-gray-700 transition-colors">Cancel</button>
+                    <button type="submit" class="flex-1 gradient-indigo text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition-all-custom hover:opacity-90">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Stock Adjust Modal -->
+    <div x-show="stockModalOpen" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4 backdrop-blur-sm" x-cloak>
+        <div class="glass-panel max-w-sm w-full rounded-3xl p-6 border border-indigo-500 border-opacity-20 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2">
+                <h3 class="text-md font-bold text-gray-100 flex items-center">
+                    <i class="fa-solid fa-cubes text-indigo-400 mr-2"></i> Adjust Inventory Stock
+                </h3>
+                <button type="button" @click="stockModalOpen = false" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div>
+                <h4 class="text-sm font-bold text-gray-300" x-text="stockData.name"></h4>
+                <p class="text-xs text-gray-500 mt-0.5">SKU: <span class="font-mono text-gray-400" x-text="stockData.sku"></span></p>
+            </div>
+
+            <form id="stock-form" hx-post="{% url 'adjust_stock' %}" hx-target="body" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="sku" x-model="stockData.sku">
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-3 bg-darkblue-800 bg-opacity-40 border border-gray-800 rounded-xl text-center">
+                        <span class="text-xs text-gray-500 block">Current Qty</span>
+                        <span class="text-xl font-black text-gray-300" x-text="stockData.current_stock"></span>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-xs text-gray-400 font-semibold block">Adjustment Quantity</label>
+                        <input type="number" name="adjustment" placeholder="e.g. +10 or -5" class="w-full glass-panel border border-gray-800 text-gray-200 text-sm rounded-xl px-3 py-2.5 focus:outline-none focus:border-indigo-500 bg-darkblue-800" required>
+                    </div>
+                </div>
+
+                <div class="flex space-x-3">
+                    <button type="button" @click="stockModalOpen = false" class="flex-1 bg-gray-800 text-gray-300 font-bold py-2 rounded-xl text-xs hover:bg-gray-700 transition-colors">Cancel</button>
+                    <button type="submit" class="flex-1 gradient-indigo text-white font-bold py-2 rounded-xl text-xs shadow-md">Apply Adjustment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function productManager() {
+        return {
+            modalOpen: false,
+            editMode: false,
+            skuOriginal: '',
+            productData: {
+                sku: '',
+                name: '',
+                rate: '',
+                tax_code: '18.00',
+                current_stock: 0,
+                is_active: 'true'
+            },
+            
+            stockModalOpen: false,
+            stockData: {
+                sku: '',
+                name: '',
+                current_stock: 0
+            },
+
+            openAddModal() {
+                this.editMode = false;
+                this.skuOriginal = '';
+                this.productData = {
+                    sku: '',
+                    name: '',
+                    rate: '',
+                    tax_code: '18.00',
+                    current_stock: 0,
+                    is_active: 'true'
+                };
+                this.modalOpen = true;
+            },
+
+            openEditModal(sku, name, rate, tax, status) {
+                this.editMode = true;
+                this.skuOriginal = sku;
+                this.productData = {
+                    sku: sku,
+                    name: name,
+                    rate: rate,
+                    tax_code: tax,
+                    is_active: status === 'True' ? 'true' : 'false'
+                };
+                this.modalOpen = true;
+            },
+
+            openStockModal(sku, name, currentStock) {
+                this.stockData = {
+                    sku: sku,
+                    name: name,
+                    current_stock: currentStock
+                };
+                this.stockModalOpen = true;
+            }
+        };
+    }
+</script>
+{% endblock %}

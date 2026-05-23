@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Business Analytics Reports | Smart Billing System v1.1{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    
+    <!-- Page Header -->
+    <div class="border-b border-gray-800 pb-4">
+        <h2 class="text-2xl font-extrabold text-white font-heading">Business Analytics & Compliance</h2>
+        <p class="text-xs text-gray-500 mt-1">Generate comprehensive PDF sales auditing, GST tax collections, and inventory metrics reports</p>
+    </div>
+
+    <!-- Reports Dashboard Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        
+        <!-- Filter & Generator Sidebar (col-span-1) -->
+        <div class="glass-panel p-5 rounded-2xl space-y-5 border border-indigo-900 border-opacity-15 shadow-xl h-fit">
+            <h3 class="text-xs text-gray-400 font-extrabold uppercase tracking-widest border-b border-gray-800 pb-2 flex items-center">
+                <i class="fa-solid fa-sliders text-indigo-400 mr-2"></i> Report Builder
+            </h3>
+            
+            <form action="{% url 'generate_pdf_report' %}" method="GET" target="_blank" class="space-y-4">
+                <!-- Select Report Type -->
+                <div class="space-y-1.5">
+                    <label class="text-xs text-gray-400 font-semibold block">Select Audit Type</label>
+                    <select name="report_type" class="w-full glass-panel border border-gray-800 text-gray-200 text-xs rounded-xl px-3 py-2.5 bg-darkblue-800 focus:outline-none focus:border-indigo-500" required>
+                        <option class="bg-gray-900 text-white" value="sales">Sales & Revenue Audit</option>
+                        <option class="bg-gray-900 text-white" value="inventory">Inventory & Reorder Status</option>
+                        <option class="bg-gray-900 text-white" value="loyalty">Customer Loyalty Rankings</option>
+                        <option class="bg-gray-900 text-white" value="tax">GST Tax Compliance (CGST/SGST)</option>
+                    </select>
+                </div>
+
+                <!-- Date Range Select -->
+                <div class="space-y-1.5" x-data="{ dateRange: 'all' }">
+                    <label class="text-xs text-gray-400 font-semibold block">Time Window</label>
+                    <select name="time_window" x-model="dateRange" class="w-full glass-panel border border-gray-800 text-gray-200 text-xs rounded-xl px-3 py-2.5 bg-darkblue-800 focus:outline-none focus:border-indigo-500">
+                        <option class="bg-gray-900 text-white" value="all">Lifetime History</option>
+                        <option class="bg-gray-900 text-white" value="today">Today's Transactions</option>
+                        <option class="bg-gray-900 text-white" value="month">Current Calendar Month</option>
+                        <option class="bg-gray-900 text-white" value="custom">Custom Date Range...</option>
+                    </select>
+                    
+                    <!-- Custom dates -->
+                    <div x-show="dateRange === 'custom'" class="space-y-2 pt-2" x-cloak>
+                        <div class="space-y-1">
+                            <span class="text-[10px] text-gray-500 font-semibold">Start Date</span>
+                            <input type="date" name="start_date" class="w-full glass-panel border border-gray-800 text-gray-300 text-xs rounded-xl px-3 py-2 bg-darkblue-800 focus:outline-none">
+                        </div>
+                        <div class="space-y-1">
+                            <span class="text-[10px] text-gray-500 font-semibold">End Date</span>
+                            <input type="date" name="end_date" class="w-full glass-panel border border-gray-800 text-gray-300 text-xs rounded-xl px-3 py-2 bg-darkblue-800 focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="w-full gradient-indigo text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition-all-custom transform hover:translate-y-[-1px] flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-file-pdf"></i> <span>Compile PDF Report</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Generated Documents List (col-span-3) -->
+        <div class="lg:col-span-3 space-y-6">
+            
+            <!-- Cards of Report Types Description -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Sales Report Overview -->
+                <div class="glass-panel p-4 rounded-2xl flex items-start space-x-3 hover:border-indigo-500 hover:border-opacity-20 transition-all">
+                    <div class="p-3 bg-indigo-950 bg-opacity-40 text-indigo-400 border border-indigo-900 border-opacity-40 rounded-xl">
+                        <i class="fa-solid fa-chart-line text-lg"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-gray-200">[Sales & Revenue Report]</h4>
+                        <p class="text-[10px] text-gray-500 mt-1 leading-relaxed">Generates detailed charts summaries, total invoicing turnovers, average basket values, and revenue growth metrics.</p>
+                    </div>
+                </div>
+
+                <!-- Inventory Report Overview -->
+                <div class="glass-panel p-4 rounded-2xl flex items-start space-x-3 hover:border-indigo-500 hover:border-opacity-20 transition-all">
+                    <div class="p-3 bg-amber-950 bg-opacity-40 text-amber-400 border border-amber-900 border-opacity-40 rounded-xl">
+                        <i class="fa-solid fa-boxes-stacked text-lg"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-gray-200">[Inventory Status Audit]</h4>
+                        <p class="text-[10px] text-gray-500 mt-1 leading-relaxed">Analyzes the current active stock levels, calculates list asset valuations, and highlights warning stocks below reorder limits.</p>
+                    </div>
+                </div>
+
+                <!-- Loyalty Report Overview -->
+                <div class="glass-panel p-4 rounded-2xl flex items-start space-x-3 hover:border-indigo-500 hover:border-opacity-20 transition-all">
+                    <div class="p-3 bg-rose-950 bg-opacity-40 text-rose-400 border border-rose-900 border-opacity-40 rounded-xl">
+                        <i class="fa-solid fa-crown text-lg"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-gray-200">[Customer Loyalty Rankings]</h4>
+                        <p class="text-[10px] text-gray-500 mt-1 leading-relaxed">Lists highest value customers, ranks profiles by lifetime sales value, and tracks points earned/redeemed ratios.</p>
+                    </div>
+                </div>
+
+                <!-- Tax Report Overview -->
+                <div class="glass-panel p-4 rounded-2xl flex items-start space-x-3 hover:border-indigo-500 hover:border-opacity-20 transition-all">
+                    <div class="p-3 bg-emerald-950 bg-opacity-40 text-emerald-400 border border-emerald-900 border-opacity-40 rounded-xl">
+                        <i class="fa-solid fa-file-invoice text-lg"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-gray-200">[Tax Compliance Report]</h4>
+                        <p class="text-[10px] text-gray-500 mt-1 leading-relaxed">Splits GST calculations into clean CGST and SGST pools, verifying precise tax compliance figures for GST reporting.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Generated Runs list -->
+            <div class="glass-panel p-6 rounded-2xl space-y-4">
+                <div>
+                    <h3 class="text-sm font-bold text-gray-200">Recent Generated Reports Audit</h3>
+                    <p class="text-[10px] text-gray-500 mt-0.5">Quickly access or download dynamically compiled PDF audits</p>
+                </div>
+                
+                <div class="divide-y divide-gray-800">
+                    <!-- Row 1 -->
+                    <div class="py-3.5 flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="text-indigo-400 bg-indigo-950 bg-opacity-30 border border-indigo-900 border-opacity-35 p-2 rounded-lg">
+                                <i class="fa-solid fa-file-pdf text-sm"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold text-gray-200">sales_revenue_lifetime_audit.pdf</h4>
+                                <span class="text-[9px] text-gray-500">Generated: Just Now • Size: 42 KB • System: MySQL DB</span>
+                            </div>
+                        </div>
+                        <div>
+                            <a href="{% url 'generate_pdf_report' %}?report_type=sales" target="_blank" class="px-2.5 py-1.5 bg-gray-850 hover:bg-gray-800 border border-gray-800 text-gray-300 hover:text-white rounded-lg text-xs transition-colors flex items-center space-x-1">
+                                <i class="fa-solid fa-download text-[10px]"></i> <span>Download</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Row 2 -->
+                    <div class="py-3.5 flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="text-emerald-400 bg-emerald-950 bg-opacity-30 border border-emerald-900 border-opacity-35 p-2 rounded-lg">
+                                <i class="fa-solid fa-file-pdf text-sm"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold text-gray-200">gst_tax_compliance_month_audit.pdf</h4>
+                                <span class="text-[9px] text-gray-500">Generated: 1 hour ago • Size: 38 KB • Status: Tax Compliant</span>
+                            </div>
+                        </div>
+                        <div>
+                            <a href="{% url 'generate_pdf_report' %}?report_type=tax" target="_blank" class="px-2.5 py-1.5 bg-gray-850 hover:bg-gray-800 border border-gray-800 text-gray-300 hover:text-white rounded-lg text-xs transition-colors flex items-center space-x-1">
+                                <i class="fa-solid fa-download text-[10px]"></i> <span>Download</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Row 3 -->
+                    <div class="py-3.5 flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="text-rose-400 bg-rose-950 bg-opacity-30 border border-rose-900 border-opacity-35 p-2 rounded-lg">
+                                <i class="fa-solid fa-file-pdf text-sm"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold text-gray-200">customer_loyalty_rankings_audit.pdf</h4>
+                                <span class="text-[9px] text-gray-500">Generated: 1 day ago • Size: 31 KB • Status: Ranks Updated</span>
+                            </div>
+                        </div>
+                        <div>
+                            <a href="{% url 'generate_pdf_report' %}?report_type=loyalty" target="_blank" class="px-2.5 py-1.5 bg-gray-850 hover:bg-gray-800 border border-gray-800 text-gray-300 hover:text-white rounded-lg text-xs transition-colors flex items-center space-x-1">
+                                <i class="fa-solid fa-download text-[10px]"></i> <span>Download</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,467 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard | Smart Billing System v1.1{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="invoiceBuilder()">
+    
+    <!-- Top Stats Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Metric 1: Total Revenue -->
+        <div class="glass-panel glass-panel-hover p-5 rounded-2xl flex items-center justify-between transition-all-custom">
+            <div class="space-y-1">
+                <span class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Total Revenue</span>
+                <h3 class="text-3xl font-extrabold text-white font-heading">₹{{ metrics.total_revenue|default:"0.00" }}</h3>
+                <span class="text-xs text-emerald-400 font-medium flex items-center"><i class="fa-solid fa-arrow-trend-up mr-1"></i> +12.4% this month</span>
+            </div>
+            <div class="p-4 gradient-indigo text-white rounded-2xl shadow-md">
+                <i class="fa-solid fa-wallet text-2xl"></i>
+            </div>
+        </div>
+        
+        <!-- Metric 2: Average Sale -->
+        <div class="glass-panel glass-panel-hover p-5 rounded-2xl flex items-center justify-between transition-all-custom">
+            <div class="space-y-1">
+                <span class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Average Sale</span>
+                <h3 class="text-3xl font-extrabold text-white font-heading">₹{{ metrics.avg_sale|default:"0.00" }}</h3>
+                <span class="text-xs text-indigo-400 font-medium flex items-center"><i class="fa-solid fa-chart-line mr-1"></i> Stable vs last week</span>
+            </div>
+            <div class="p-4 gradient-emerald text-white rounded-2xl shadow-md">
+                <i class="fa-solid fa-calculator text-2xl"></i>
+            </div>
+        </div>
+
+        <!-- Metric 3: Active Stock items -->
+        <div class="glass-panel glass-panel-hover p-5 rounded-2xl flex items-center justify-between transition-all-custom">
+            <div class="space-y-1">
+                <span class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Product Inventory</span>
+                <h3 class="text-3xl font-extrabold text-white font-heading">{{ metrics.active_stock|default:"0" }}</h3>
+                <span class="text-xs text-rose-400 font-medium flex items-center"><i class="fa-solid fa-triangle-exclamation mr-1"></i> {{ low_stock_count }} items low stock</span>
+            </div>
+            <div class="p-4 gradient-amber text-white rounded-2xl shadow-md">
+                <i class="fa-solid fa-box text-2xl"></i>
+            </div>
+        </div>
+
+        <!-- Metric 4: Loyal Customers -->
+        <div class="glass-panel glass-panel-hover p-5 rounded-2xl flex items-center justify-between transition-all-custom">
+            <div class="space-y-1">
+                <span class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Customer Base</span>
+                <h3 class="text-3xl font-extrabold text-white font-heading">{{ metrics.customers_count|default:"0" }}</h3>
+                <span class="text-xs text-emerald-400 font-medium flex items-center"><i class="fa-solid fa-users-line mr-1"></i> +8 active today</span>
+            </div>
+            <div class="p-4 gradient-rose text-white rounded-2xl shadow-md">
+                <i class="fa-solid fa-user-tag text-2xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Section: Charts & Operations Drawer -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Analytics Charts (2/3 width on large screen) -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Charts Glass Container -->
+            <div class="glass-panel p-6 rounded-2xl space-y-6">
+                <div class="flex items-center justify-between border-b border-gray-800 pb-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-100">Business Performance Analytics</h3>
+                        <span class="text-xs text-gray-500">Live operational overview</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 bg-indigo-500 rounded-full animate-ping mr-1"></span>
+                        <span class="text-xs text-indigo-400 font-bold uppercase tracking-wider">Calculated Realtime</span>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Chart 1: Sales Revenue -->
+                    <div class="h-64 relative">
+                        <h4 class="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-2 text-center">Monthly Revenue (₹)</h4>
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                    <!-- Chart 2: Top Products -->
+                    <div class="h-64 relative">
+                        <h4 class="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-2 text-center">Top Selling Products (qty)</h4>
+                        <canvas id="productsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Invoices table -->
+            <div class="glass-panel p-6 rounded-2xl space-y-4">
+                <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+                    <h3 class="text-lg font-bold text-gray-100">Recent Transactions</h3>
+                    <a href="{% url 'reports' %}" class="text-xs text-indigo-400 font-semibold hover:text-indigo-300 flex items-center transition-colors">
+                        View All Reports <i class="fa-solid fa-chevron-right ml-1"></i>
+                    </a>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm border-collapse">
+                        <thead>
+                            <tr class="border-b border-gray-800 text-gray-500 font-semibold">
+                                <th class="pb-3 text-xs uppercase tracking-wider">Invoice No.</th>
+                                <th class="pb-3 text-xs uppercase tracking-wider">Customer</th>
+                                <th class="pb-3 text-xs uppercase tracking-wider">Date</th>
+                                <th class="pb-3 text-xs uppercase tracking-wider">Total Amount</th>
+                                <th class="pb-3 text-xs uppercase tracking-wider">Status</th>
+                                <th class="pb-3 text-xs uppercase tracking-wider">Method</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-800 divide-opacity-50">
+                            {% for inv in recent_invoices %}
+                            <tr class="hover:bg-gray-850 hover:bg-opacity-30 transition-colors">
+                                <td class="py-3 font-semibold text-indigo-400 font-mono">{{ inv.invoice_number }}</td>
+                                <td class="py-3 font-medium text-gray-300">{{ inv.customer.name|default:"Retail Customer" }}</td>
+                                <td class="py-3 text-gray-500 text-xs">{{ inv.created_at|date:"M d, Y H:i" }}</td>
+                                <td class="py-3 font-bold text-gray-200">₹{{ inv.total_amount }}</td>
+                                <td class="py-3">
+                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase {% if inv.payment_status == 'Paid' %}badge-paid{% elif inv.payment_status == 'Pending' %}badge-pending{% else %}badge-failed{% endif %}">
+                                        {{ inv.payment_status }}
+                                    </span>
+                                </td>
+                                <td class="py-3 text-xs text-gray-400"><i class="fa-solid fa-credit-card mr-1 text-[10px] text-gray-500"></i> {{ inv.payment_method }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="py-4 text-center text-gray-500">No transactions recorded yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Invoice Creator (1/3 width) -->
+        <div class="space-y-6">
+            <!-- Low Stock / System Alerts scrollable widget -->
+            <div class="glass-panel p-5 rounded-2xl space-y-4">
+                <h3 class="text-md font-bold text-gray-200 border-b border-gray-800 pb-2 flex items-center">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-500 mr-2"></i> System Alerts Feed
+                </h3>
+                <div class="space-y-3 max-h-48 overflow-y-auto pr-1">
+                    {% for alert in alerts %}
+                    <div class="p-3 rounded-xl border flex items-start space-x-2 text-xs transition-colors {% if alert.level == 'danger' %} bg-rose-950 bg-opacity-30 border-rose-900 border-opacity-40 text-rose-300 {% elif alert.level == 'warning' %} bg-amber-950 bg-opacity-30 border-amber-900 border-opacity-40 text-amber-300 {% else %} bg-indigo-950 bg-opacity-30 border-indigo-900 border-opacity-40 text-indigo-300 {% endif %}">
+                        <i class="fa-solid {% if alert.level == 'danger' %}fa-circle-xmark{% elif alert.level == 'warning' %}fa-circle-exclamation{% else %}fa-circle-info{% endif %} mt-0.5 shrink-0"></i>
+                        <div>
+                            <p class="font-medium leading-relaxed">{{ alert.message }}</p>
+                            <span class="text-[10px] text-gray-500 block mt-1">{{ alert.created_at|timesince }} ago</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4 text-xs text-gray-500">
+                        <i class="fa-solid fa-circle-check text-emerald-400 text-lg mb-2 block"></i>
+                        All systems nominal. No stock or billing alerts active.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Quick Invoice Drawer -->
+            <div class="glass-panel p-6 rounded-2xl space-y-6 border border-indigo-900 border-opacity-20 shadow-xl">
+                <div>
+                    <h3 class="text-lg font-bold text-indigo-300 flex items-center">
+                        <i class="fa-solid fa-cart-plus mr-2 text-indigo-400"></i> Quick Invoice Creator
+                    </h3>
+                    <p class="text-xs text-gray-500 mt-1">Compile real-time sales transactions & apply loyalty tiers</p>
+                </div>
+                
+                <form id="invoice-creator-form" hx-post="{% url 'create_invoice' %}" hx-target="body" class="space-y-4">
+                    {% csrf_token %}
+                    
+                    <!-- Customer Selector -->
+                    <div class="space-y-1.5">
+                        <label class="text-xs text-gray-400 font-semibold block">Select Customer</label>
+                        <select name="customer" x-model="customerId" class="w-full glass-panel border border-gray-800 text-gray-200 text-sm rounded-xl px-3 py-2.5 focus:outline-none focus:border-indigo-500 bg-darkblue-800">
+                            <option class="bg-gray-900 text-white" value="">Walk-in Retail Customer</option>
+                            {% for cust in customers %}
+                            <option class="bg-gray-900 text-white" value="{{ cust.id }}" data-points="{{ cust.loyalty_points }}">{{ cust.name }} (L: {{ cust.loyalty_points }} pts)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Items List -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between text-xs text-gray-400 font-semibold border-b border-gray-800 pb-1">
+                            <span>Selected Items</span>
+                            <button type="button" @click="addItem()" class="text-indigo-400 hover:text-indigo-300 font-bold flex items-center">
+                                <i class="fa-solid fa-plus-circle mr-1"></i> Add Row
+                            </button>
+                        </div>
+                        
+                        <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
+                            <template x-for="(item, index) in items" :key="index">
+                                <div class="grid grid-cols-12 gap-2 items-center bg-darkblue-800 bg-opacity-40 p-2 rounded-xl border border-gray-800">
+                                    <div class="col-span-6">
+                                        <select :name="'item_product_' + index" x-model="item.product_sku" @change="updateItemDetails(index)" class="w-full bg-transparent text-xs text-gray-200 focus:outline-none bg-darkblue-900 rounded p-1 border border-gray-800" required>
+                                            <option class="bg-gray-900 text-white" value="">-- Choose Product --</option>
+                                            {% for prod in products %}
+                                            <option class="bg-gray-900 text-white" value="{{ prod.sku }}" data-rate="{{ prod.rate }}" data-tax="{{ prod.tax_code }}">{{ prod.name }} (₹{{ prod.rate }})\u003c/option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-span-3">
+                                        <input type="number" :name="'item_qty_' + index" x-model.number="item.quantity" min="1" class="w-full bg-transparent text-xs text-center text-gray-200 focus:outline-none bg-darkblue-900 rounded p-1 border border-gray-800" required>
+                                    </div>
+                                    <div class="col-span-2 text-right text-xs font-bold text-indigo-400" x-text="'₹' + (item.quantity * item.rate).toFixed(2)"></div>
+                                    <div class="col-span-1 text-center">
+                                        <button type="button" @click="removeItem(index)" class="text-rose-500 hover:text-rose-400">
+                                            <i class="fa-regular fa-trash-can text-sm"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Discount Entry -->
+                    <div class="grid grid-cols-2 gap-4 border-t border-gray-800 pt-3">
+                        <div class="space-y-1">
+                            <label class="text-xs text-gray-400 font-semibold block">Discount (%)</label>
+                            <input type="number" x-model.number="discountPercent" min="0" max="100" placeholder="0" class="w-full glass-panel border border-gray-800 text-gray-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500 bg-darkblue-800">
+                            <input type="hidden" name="discount" :value="getDiscountAmount().toFixed(2)">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs text-gray-400 font-semibold block">Payment Method</label>
+                            <select name="payment_method" x-model="paymentMethod" class="w-full glass-panel border border-gray-800 text-gray-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500 bg-darkblue-800">
+                                <option class="bg-gray-900 text-white" value="UPI">UPI Payment</option>
+                                <option class="bg-gray-900 text-white" value="Cash">Cash Transaction</option>
+                                <option class="bg-gray-900 text-white" value="Card">Credit/Debit Card</option>
+                                <option class="bg-gray-900 text-white" value="Loyalty Points">Loyalty Points</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Invoice Dynamic Math Breakdown -->
+                    <div class="p-3 bg-indigo-950 bg-opacity-20 rounded-2xl border border-indigo-900 border-opacity-30 space-y-1.5 text-xs text-gray-400">
+                        <div class="flex justify-between">
+                            <span>Subtotal:</span>
+                            <span class="font-bold text-gray-300" x-text="'₹' + getSubtotal().toFixed(2)">₹0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>GST Tax (CGST + SGST):</span>
+                            <span class="font-bold text-gray-300" x-text="'₹' + getTax().toFixed(2)">₹0.00</span>
+                        </div>
+                        <div class="flex justify-between text-rose-400" x-show="discountPercent > 0">
+                            <span>Discount Applied (<span x-text="discountPercent"></span>%):</span>
+                            <span class="font-bold" x-text="'-₹' + getDiscountAmount().toFixed(2)">-₹0.00</span>
+                        </div>
+                        <div class="flex justify-between text-sm font-extrabold text-white border-t border-indigo-900 border-opacity-40 pt-1.5">
+                            <span>Net Total:</span>
+                            <span class="text-indigo-400" x-text="'₹' + getTotal().toFixed(2)">₹0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Hidden calculated inputs to submit with the form -->
+                    <input type="hidden" name="subtotal_val" :value="getSubtotal()">
+                    <input type="hidden" name="tax_val" :value="getTax()">
+                    <input type="hidden" name="total_val" :value="getTotal()">
+                    <input type="hidden" name="items_count" :value="items.length">
+
+                    <!-- Actions -->
+                    <div class="flex space-x-3 pt-2">
+                        <button type="button" @click="showPaymentCheckout()" class="flex-1 gradient-indigo text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-md transition-all-custom transform hover:translate-y-[-1px] flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-receipt"></i> <span>Proceed Checkout</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scan to Pay & Invoice Preview Modal -->
+    <div x-show="checkoutModalOpen" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4 backdrop-blur-sm" x-cloak>
+        <div class="glass-panel max-w-md w-full rounded-3xl p-6 border border-indigo-500 border-opacity-20 shadow-2xl space-y-6 transform scale-100 transition-all duration-350">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                <h3 class="text-lg font-bold text-gray-100 flex items-center"><i class="fa-solid fa-cash-register text-indigo-400 mr-2"></i> Cashier POS checkout</h3>
+                <button type="button" @click="checkoutModalOpen = false" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <!-- Invoice Details -->
+            <div class="space-y-3 bg-darkblue-800 bg-opacity-40 p-4 rounded-2xl border border-gray-800 text-xs">
+                <h4 class="font-bold text-gray-300 text-center uppercase tracking-widest text-[10px]">Tax Invoice Preview</h4>
+                <div class="divide-y divide-gray-800">
+                    <div class="py-2 flex justify-between">
+                        <span class="text-gray-500">Billing Date:</span>
+                        <span class="text-gray-300 font-mono">{% now "Y-m-d H:i" %}</span>
+                    </div>
+                    <div class="py-2 flex justify-between">
+                        <span class="text-gray-500">Customer Class:</span>
+                        <span class="text-gray-300 font-bold" x-text="customerId ? 'Registered Client' : 'Walk-in Retailer'"></span>
+                    </div>
+                    <div class="py-2 flex justify-between">
+                        <span class="text-gray-500">Payment Channel:</span>
+                        <span class="text-indigo-400 font-bold uppercase" x-text="paymentMethod"></span>
+                    </div>
+                    <div class="py-2 flex justify-between text-sm font-extrabold border-t border-gray-800">
+                        <span class="text-gray-200">Grand Bill Amount:</span>
+                        <span class="text-emerald-400" x-text="'₹' + getTotal().toFixed(2)"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive QR Scan code (rendered only for UPI/Digital checkouts) -->
+            <div x-show="paymentMethod === 'UPI'" class="flex flex-col items-center justify-center py-4 bg-white rounded-2xl p-4 shadow-inner">
+                <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=7483654078@ptyes%26pn=Smart%20Billing%26am=' + getTotal() + '%26cu=INR'" alt="UPI Pay Code" class="w-36 h-36 border-4 border-white mb-2">
+                <span class="text-[10px] text-gray-500 font-bold tracking-widest uppercase">SCAN TO PAY VIA UPI</span>
+                <span class="text-xs text-indigo-900 font-extrabold mt-1" x-text="'Amt: ₹' + getTotal().toFixed(2)"></span>
+            </div>
+
+            <div x-show="paymentMethod !== 'UPI'" class="flex flex-col items-center justify-center py-6 text-center text-gray-400">
+                <i class="fa-solid {% if paymentMethod == 'Cash' %}fa-money-bill-wave text-emerald-400{% elif paymentMethod == 'Card' %}fa-credit-card text-indigo-400{% else %}fa-star text-amber-400{% endif %} text-5xl mb-3"></i>
+                <h4 class="font-extrabold text-sm text-gray-200" x-text="paymentMethod + ' checkout pending confirmation'"></h4>
+                <p class="text-xs text-gray-500 mt-1" x-text="'Collect ₹' + getTotal().toFixed(2) + ' from the client'"></p>
+            </div>
+
+            <!-- Confirm Buttons -->
+            <div class="flex space-x-3 pt-2">
+                <button type="button" @click="checkoutModalOpen = false" class="flex-1 bg-gray-800 text-gray-300 font-bold py-2.5 rounded-xl text-xs hover:bg-gray-700 transition-colors">Cancel</button>
+                <button type="button" @click="submitInvoice()" class="flex-1 gradient-indigo text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition-all-custom hover:opacity-90 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-circle-check"></i> <span>Authorize Payment</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Chart Configurations
+    document.addEventListener("DOMContentLoaded", () => {
+        // Line Chart: Monthly Revenue
+        const ctxRev = document.getElementById('revenueChart').getContext('2d');
+        new Chart(ctxRev, {
+            type: 'line',
+            data: {
+                labels: ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'],
+                datasets: [{
+                    label: 'Revenue (₹)',
+                    data: [154200, 182100, 169300, 214500, 225830, 248900],
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#6366f1'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 10 } } },
+                    y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#9ca3af', font: { size: 10 } } }
+                }
+            }
+        });
+
+        // Bar Chart: Top Products
+        const ctxProd = document.getElementById('productsChart').getContext('2d');
+        new Chart(ctxProd, {
+            type: 'bar',
+            data: {
+                labels: ['Product A', 'Product B', 'Product C', 'Product D', 'Product E'],
+                datasets: [{
+                    label: 'Qty Sold',
+                    data: [420, 310, 280, 210, 185],
+                    backgroundColor: ['#4f46e5', '#10b981', '#f59e0b', '#f43f5e', '#a855f7'],
+                    borderRadius: 8,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 10 } } },
+                    y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#9ca3af', font: { size: 10 } } }
+                }
+            }
+        });
+    });
+
+    // Alpine JS state management
+    function invoiceBuilder() {
+        return {
+            customerId: '',
+            paymentMethod: 'UPI',
+            discountPercent: 0,
+            items: [
+                { product_sku: '', quantity: 1, rate: 0, tax_rate: 18 }
+            ],
+            checkoutModalOpen: false,
+
+            addItem() {
+                this.items.push({ product_sku: '', quantity: 1, rate: 0, tax_rate: 18 });
+            },
+
+            removeItem(index) {
+                if (this.items.length > 1) {
+                    this.items.splice(index, 1);
+                } else {
+                    this.items = [{ product_sku: '', quantity: 1, rate: 0, tax_rate: 18 }];
+                }
+            },
+
+            updateItemDetails(index) {
+                const selectElement = document.getElementsByName('item_product_' + index)[0];
+                if (selectElement) {
+                    const selectedOption = selectElement.options[selectElement.selectedIndex];
+                    if (selectedOption && selectedOption.value !== "") {
+                        this.items[index].rate = parseFloat(selectedOption.getAttribute('data-rate')) || 0;
+                        this.items[index].tax_rate = parseFloat(selectedOption.getAttribute('data-tax')) || 18;
+                    } else {
+                        this.items[index].rate = 0;
+                        this.items[index].tax_rate = 18;
+                    }
+                }
+            },
+
+            getSubtotal() {
+                return this.items.reduce((sum, item) => sum + (item.quantity * item.rate), 0);
+            },
+
+            getTax() {
+                return this.items.reduce((sum, item) => sum + ((item.quantity * item.rate) * (item.tax_rate / 100)), 0);
+            },
+
+            getDiscountAmount() {
+                return (this.getSubtotal() + this.getTax()) * (this.discountPercent / 100);
+            },
+
+            getTotal() {
+                const sub = this.getSubtotal();
+                const tax = this.getTax();
+                const total = sub + tax - this.getDiscountAmount();
+                return total > 0 ? total : 0;
+            },
+
+            showPaymentCheckout() {
+                // Perform validations
+                if (this.items.some(item => item.product_sku === '')) {
+                    alert('Please select a product for all rows or remove empty rows.');
+                    return;
+                }
+                this.checkoutModalOpen = true;
+            },
+
+            submitInvoice() {
+                // Submit the form using HTMX
+                this.checkoutModalOpen = false;
+                const form = document.getElementById('invoice-creator-form');
+                if (form) {
+                    // We trigger HTMX request manually or programmatically
+                    htmx.trigger(form, 'submit');
+                }
+            }
+        };
+    }
+</script>
+{% endblock %}

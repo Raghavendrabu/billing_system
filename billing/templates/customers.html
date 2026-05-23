@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Customer Directory | Smart Billing System v1.1{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="customerManager()">
+    
+    <!-- Header Controls -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-800 pb-4">
+        <div>
+            <h2 class="text-2xl font-extrabold text-white font-heading">Customer Directory & Loyalty</h2>
+            <p class="text-xs text-gray-500 mt-1">Track customer spend metrics, distribute loyalty points, and manage balances</p>
+        </div>
+        <div>
+            <button @click="openAddModal()" class="gradient-indigo text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md transition-all-custom transform hover:translate-y-[-1px] flex items-center space-x-2">
+                <i class="fa-solid fa-user-plus"></i> <span>Add New Customer</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats & Leaderboard Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Search and Filters (col-span-2) -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Search pane -->
+            <div class="glass-panel p-4 rounded-2xl flex items-center gap-4">
+                <div class="relative flex-1">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
+                        <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                    </span>
+                    <input type="text" id="customer-search" name="search" hx-get="{% url 'customers' %}" hx-target="#customers-table-container" hx-trigger="keyup changed delay:300ms" placeholder="Search by Customer Name, Email, or Phone..." class="w-full glass-panel border border-gray-800 text-gray-200 text-xs rounded-xl pl-9 pr-4 py-2.5 focus:outline-none focus:border-indigo-500 bg-darkblue-800">
+                </div>
+            </div>
+
+            <!-- Customers Table Container -->
+            <div id="customers-table-container" class="glass-panel rounded-2xl overflow-hidden shadow-lg border border-gray-800">
+                {% include 'partials/customers_table.html' %}
+            </div>
+        </div>
+
+        <!-- VIP Leaderboard (col-span-1) -->
+        <div class="space-y-6">
+            <!-- Summary Metric cards -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="glass-panel p-4 rounded-2xl text-center border-t-2 border-indigo-500">
+                    <span class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Total Members</span>
+                    <h4 class="text-xl font-extrabold text-white mt-1">{{ customers|length }}</h4>
+                </div>
+                <div class="glass-panel p-4 rounded-2xl text-center border-t-2 border-amber-500">
+                    <span class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Loyalty Issued</span>
+                    <h4 class="text-xl font-extrabold text-amber-400 mt-1">{{ total_loyalty_points }} pts</h4>
+                </div>
+            </div>
+
+            <!-- VIP Leaders List -->
+            <div class="glass-panel p-5 rounded-2xl space-y-4 border border-indigo-900 border-opacity-15 shadow-xl">
+                <div>
+                    <h3 class="text-sm font-extrabold text-indigo-300 uppercase tracking-widest flex items-center">
+                        <i class="fa-solid fa-crown text-amber-500 mr-2"></i> VIP Loyalty Leaderboard
+                    </h3>
+                    <p class="text-[10px] text-gray-500 mt-0.5">Top customer tiers ranked by sales volume</p>
+                </div>
+                
+                <div class="space-y-2">
+                    {% for top_cust in top_customers %}
+                    <div class="p-3 bg-darkblue-800 bg-opacity-40 rounded-xl border border-gray-800 flex items-center justify-between transition-all hover:border-indigo-500 hover:border-opacity-30">
+                        <div class="flex items-center space-x-3">
+                            <span class="font-extrabold text-xs font-mono text-indigo-400 w-5">#{{ forloop.counter }}</span>
+                            <div>
+                                <h4 class="text-xs font-bold text-gray-200">{{ top_cust.name }}</h4>
+                                <span class="text-[10px] text-gray-500">{{ top_cust.phone|default:"No Phone" }}</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-extrabold text-amber-400 block"><i class="fa-solid fa-star text-[9px] mr-0.5"></i> {{ top_cust.loyalty_points }} pts</span>
+                            <span class="text-[10px] text-gray-500 font-medium">Vol: ₹{{ top_cust.lifetime_value }}</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-center py-4 text-xs text-gray-500">No VIP members registered.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Customer Modal -->
+    <div x-show="modalOpen" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4 backdrop-blur-sm" x-cloak>
+        <div class="glass-panel max-w-md w-full rounded-3xl p-6 border border-indigo-500 border-opacity-20 shadow-2xl space-y-5">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                <h3 class="text-lg font-bold text-gray-100 flex items-center">
+                    <i class="fa-solid fa-user-tag text-indigo-400 mr-2"></i> 
+                    <span x-text="editMode ? 'Edit Customer Information' : 'Register New Customer Profile'"></span>
+                </h3>
+                <button type="button" @click="modalOpen = false" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form id="customer-form" hx-post="{% url 'save_customer' %}" hx-target="body" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="customer_id" x-model="customerId">
+                <input type="hidden" name="action" :value="editMode ? 'edit' : 'add'">
+
+                <!-- Full Name -->
+                <div class="space-y-1">
+                    <label class="text-xs text-gray-400 font-semibold block">Full Name</label>
+                    <input type="text" name="name" x-model="customerData.name" placeholder="e.g. Rahul Sharma" class="w-full glass-panel border border-gray-800 text-gray-200 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-indigo-500 bg-darkblue-800" required>
+                </div>
+
+                <!-- Email -->
+                <div class="space-y-1">
+                    <label class="text-xs text-gray-400 font-semibold block">Email Address</label>
+                    <input type="email" name="email" x-model="customerData.email" placeholder="e.g. rahul.sharma@example.com" class="w-full glass-panel border border-gray-800 text-gray-200 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-indigo-500 bg-darkblue-800">
+                </div>
+
+                <!-- Phone -->
+                <div class="space-y-1">
+                    <label class="text-xs text-gray-400 font-semibold block">Phone Number</label>
+                    <input type="text" name="phone" x-model="customerData.phone" placeholder="e.g. +91 98765 43210" class="w-full glass-panel border border-gray-800 text-gray-200 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-indigo-500 bg-darkblue-800">
+                </div>
+
+                <!-- Initial Balance / Points (only for adding) -->
+                <div class="grid grid-cols-2 gap-4" x-show="!editMode">
+                    <div class="space-y-1">
+                        <label class="text-xs text-gray-400 font-semibold block">Loyalty Points Balance</label>
+                        <input type="number" name="loyalty_points" x-model="customerData.loyalty_points" min="0" placeholder="0" class="w-full glass-panel border border-gray-800 text-gray-200 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-indigo-500 bg-darkblue-800">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-xs text-gray-400 font-semibold block">Store Credit Balance (₹)</label>
+                        <input type="number" name="balance" x-model="customerData.balance" step="0.01" placeholder="0.00" class="w-full glass-panel border border-gray-800 text-gray-200 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-indigo-500 bg-darkblue-800">
+                    </div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="flex space-x-3 pt-2">
+                    <button type="button" @click="modalOpen = false" class="flex-1 bg-gray-800 text-gray-300 font-bold py-2.5 rounded-xl text-xs hover:bg-gray-700 transition-colors">Cancel</button>
+                    <button type="submit" class="flex-1 gradient-indigo text-white font-bold py-2.5 rounded-xl text-xs shadow-md">Register Customer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function customerManager() {
+        return {
+            modalOpen: false,
+            editMode: false,
+            customerId: '',
+            customerData: {
+                name: '',
+                email: '',
+                phone: '',
+                loyalty_points: 0,
+                balance: 0.00
+            },
+
+            openAddModal() {
+                this.editMode = false;
+                this.customerId = '';
+                this.customerData = {
+                    name: '',
+                    email: '',
+                    phone: '',
+                    loyalty_points: 0,
+                    balance: 0.00
+                };
+                this.modalOpen = true;
+            },
+
+            openEditModal(id, name, email, phone) {
+                this.editMode = true;
+                this.customerId = id;
+                this.customerData = {
+                    name: name,
+                    email: email,
+                    phone: phone
+                };
+                this.modalOpen = true;
+            }
+        };
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,53 @@
+<table class="w-full text-left text-sm border-collapse">
+    <thead>
+        <tr class="border-b border-gray-800 text-gray-500 font-semibold bg-darkblue-800 bg-opacity-25">
+            <th class="p-4 text-xs uppercase tracking-wider">Customer Info</th>
+            <th class="p-4 text-xs uppercase tracking-wider">Phone</th>
+            <th class="p-4 text-xs uppercase tracking-wider">Lifetime Value</th>
+            <th class="p-4 text-xs uppercase tracking-wider">Loyalty Balance</th>
+            <th class="p-4 text-xs uppercase tracking-wider">Credit Balance</th>
+            <th class="p-4 text-xs uppercase tracking-wider text-right">Actions</th>
+        </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-800 divide-opacity-50">
+        {% for cust in customers %}
+        <tr class="hover:bg-gray-850 hover:bg-opacity-35 transition-colors">
+            <!-- Customer info -->
+            <td class="p-4">
+                <div class="flex items-center space-x-3">
+                    <div class="w-9 h-9 rounded-full bg-indigo-950 bg-opacity-50 text-indigo-400 border border-indigo-900 border-opacity-40 flex items-center justify-center font-bold">
+                        {{ cust.name|slice:":2"|upper }}
+                    </div>
+                    <div>
+                        <span class="font-bold text-gray-200 block">{{ cust.name }}</span>
+                        <span class="text-xs text-gray-500 block">{{ cust.email|default:"No email registered" }}</span>
+                    </div>
+                </div>
+            </td>
+            
+            <!-- Phone -->
+            <td class="p-4 text-xs text-gray-400 font-medium">{{ cust.phone|default:"---" }}</td>
+            
+            <!-- Lifetime Value -->
+            <td class="p-4 font-extrabold text-emerald-400">₹{{ cust.lifetime_value }}</td>
+            
+            <!-- Loyalty Balance -->
+            <td class="p-4 font-semibold text-amber-400"><i class="fa-solid fa-star text-[10px] mr-1"></i> {{ cust.loyalty_points }} pts</td>
+            
+            <!-- Store Credit Balance -->
+            <td class="p-4 font-mono text-xs text-gray-300">₹{{ cust.balance }}</td>
+            
+            <!-- Actions -->
+            <td class="p-4 text-right">
+                <button type="button" @click="openEditModal('{{ cust.id }}', '{{ cust.name|escapejs }}', '{{ cust.email|escapejs }}', '{{ cust.phone|escapejs }}')" class="px-2.5 py-1.5 bg-indigo-950 bg-opacity-35 hover:bg-indigo-900 border border-indigo-900 border-opacity-40 text-indigo-400 hover:text-indigo-300 rounded-lg text-xs transition-colors">
+                    <i class="fa-regular fa-pen-to-square mr-1 text-[10px]"></i> Edit Profile
+                </button>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="6" class="p-6 text-center text-gray-500">No registered customers found matching search filters.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

@@ -1,0 +1,146 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Smart Billing System v1.1{% endblock %}</title>
+    
+    <!-- Meta Tags for SEO -->
+    <meta name="description" content="Manage inventory, track sales, calculate taxes, award loyalty points, and compile professional invoices with the Smart Billing System v1.1.">
+    <meta name="keywords" content="billing system, invoice manager, tax compliance, gst calculator, inventory tracking">
+    
+    <!-- Tailwind CSS, FontAwesome, HTMX, AlpineJS, ChartJS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/htmx.org@1.9.5"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+    
+    <script>
+        // Tailwind configurations
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkblue: {
+                            900: '#0b0f19',
+                            800: '#111827',
+                            700: '#1f2937',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-darkblue-900 text-gray-100 min-h-screen flex flex-col md:flex-row antialiased">
+
+    <!-- Mobile Header -->
+    <div class="md:hidden flex items-center justify-between p-4 glass-panel border-b border-gray-800 z-50">
+        <div class="flex items-center space-x-2">
+            <div class="p-2 gradient-indigo rounded-lg text-white">
+                <i class="fa-solid fa-file-invoice-dollar text-xl"></i>
+            </div>
+            <span class="font-extrabold text-lg tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">SMARTBILL</span>
+        </div>
+        <button id="mobile-menu-btn" class="text-gray-300 focus:outline-none hover:text-white">
+            <i class="fa-solid fa-bars text-2xl"></i>
+        </button>
+    </div>
+
+    <!-- Navigation Sidebar -->
+    <aside id="sidebar" class="hidden md:flex flex-col w-full md:w-64 glass-panel border-r border-gray-800 min-h-screen p-5 fixed md:static top-0 left-0 z-40 transition-all duration-300">
+        <div class="flex items-center space-x-3 mb-8 px-2">
+            <div class="p-2.5 gradient-indigo rounded-xl text-white shadow-lg pulse-glow">
+                <i class="fa-solid fa-file-invoice-dollar text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="font-extrabold text-xl tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400 leading-tight">SMARTBILL</h1>
+                <span class="text-xs text-gray-500 font-semibold tracking-widest uppercase">System v1.1</span>
+            </div>
+        </div>
+
+        <nav class="flex-1 space-y-1">
+            <a href="{% url 'dashboard' %}" class="flex items-center space-x-3 px-4 py-3 rounded-xl transition-all-custom {% if active_page == 'dashboard' %} bg-indigo-600 bg-opacity-25 text-indigo-400 border-l-4 border-indigo-500 font-medium {% else %} text-gray-400 hover:bg-gray-800 hover:text-gray-200 {% endif %}">
+                <i class="fa-solid fa-chart-pie text-lg w-6"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="{% url 'products' %}" class="flex items-center space-x-3 px-4 py-3 rounded-xl transition-all-custom {% if active_page == 'products' %} bg-indigo-600 bg-opacity-25 text-indigo-400 border-l-4 border-indigo-500 font-medium {% else %} text-gray-400 hover:bg-gray-800 hover:text-gray-200 {% endif %}">
+                <i class="fa-solid fa-boxes-stacked text-lg w-6"></i>
+                <span>Products</span>
+            </a>
+            <a href="{% url 'customers' %}" class="flex items-center space-x-3 px-4 py-3 rounded-xl transition-all-custom {% if active_page == 'customers' %} bg-indigo-600 bg-opacity-25 text-indigo-400 border-l-4 border-indigo-500 font-medium {% else %} text-gray-400 hover:bg-gray-800 hover:text-gray-200 {% endif %}">
+                <i class="fa-solid fa-users text-lg w-6"></i>
+                <span>Customers</span>
+            </a>
+            <a href="{% url 'reports' %}" class="flex items-center space-x-3 px-4 py-3 rounded-xl transition-all-custom {% if active_page == 'reports' %} bg-indigo-600 bg-opacity-25 text-indigo-400 border-l-4 border-indigo-500 font-medium {% else %} text-gray-400 hover:bg-gray-800 hover:text-gray-200 {% endif %}">
+                <i class="fa-solid fa-chart-line text-lg w-6"></i>
+                <span>Reports</span>
+            </a>
+        </nav>
+
+        <div class="mt-auto pt-6 border-t border-gray-800">
+            <div class="flex items-center space-x-3 px-2 py-2">
+                <div class="w-10 h-10 rounded-full gradient-indigo flex items-center justify-center font-bold text-white shadow-inner">
+                    JD
+                </div>
+                <div class="overflow-hidden">
+                    <h4 class="font-bold text-sm truncate text-gray-200">John Doe</h4>
+                    <span class="text-xs text-indigo-400 font-medium tracking-wide">Administrator</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Workspace Container -->
+    <main class="flex-1 flex flex-col min-h-screen overflow-y-auto">
+        <!-- Top Navigation Header -->
+        <header class="glass-panel border-b border-gray-800 h-16 px-6 flex items-center justify-between hidden md:flex shrink-0">
+            <div class="flex items-center space-x-3">
+                <span class="text-xs font-semibold px-2.5 py-1 bg-indigo-900 bg-opacity-50 text-indigo-300 rounded-full border border-indigo-800">SESSION ACTIVE</span>
+                <span class="text-xs text-gray-500">ID: <span class="font-mono text-gray-400">#8acda802</span></span>
+            </div>
+            
+            <div class="flex items-center space-x-6">
+                <!-- System Alerts Bell -->
+                <div class="relative cursor-pointer hover:text-indigo-400 transition-colors">
+                    <i class="fa-regular fa-bell text-xl"></i>
+                    <span class="absolute -top-1.5 -right-1.5 bg-rose-500 text-white font-bold rounded-full text-[9px] w-4.5 h-4.5 flex items-center justify-center px-1">3</span>
+                </div>
+                
+                <div class="flex items-center space-x-3 pl-4 border-l border-gray-800">
+                    <div class="text-right">
+                        <p class="text-xs text-gray-500 font-medium">Server Status</p>
+                        <p class="text-xs text-emerald-400 font-bold flex items-center justify-end">
+                            <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-1.5 animate-pulse"></span> Online
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content View -->
+        <div class="p-6 md:p-8 flex-1">
+            {% block content %}
+            {% endblock %}
+        </div>
+    </main>
+
+    <script>
+        // Toggle Mobile Menu
+        const mobileBtn = document.getElementById('mobile-menu-btn');
+        const sidebar = document.getElementById('sidebar');
+        
+        if (mobileBtn && sidebar) {
+            mobileBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('hidden');
+                sidebar.classList.toggle('flex');
+            });
+        }
+    </script>
+</body>
+</html>
