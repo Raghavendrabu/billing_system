@@ -333,20 +333,29 @@
             </div>
         </div>
     </div>
-
+{{ chart_months|json_script:"chart-months-data" }}
+{{ chart_revenue|json_script:"chart-revenue-data" }}
+{{ chart_products|json_script:"chart-products-data" }}
+{{ chart_product_qtys|json_script:"chart-product-qtys-data" }}
 
 <script>
     // Chart Configurations
     document.addEventListener("DOMContentLoaded", () => {
+        // Parse dynamic chart datasets from secure JSON script blocks
+        const chartMonths = JSON.parse(document.getElementById('chart-months-data').textContent);
+        const chartRevenue = JSON.parse(document.getElementById('chart-revenue-data').textContent);
+        const chartProducts = JSON.parse(document.getElementById('chart-products-data').textContent);
+        const chartProductQtys = JSON.parse(document.getElementById('chart-product-qtys-data').textContent);
+
         // Line Chart: Monthly Revenue
         const ctxRev = document.getElementById('revenueChart').getContext('2d');
         new Chart(ctxRev, {
             type: 'line',
             data: {
-                labels: {{ chart_months|safe }},
+                labels: chartMonths,
                 datasets: [{
                     label: 'Revenue (₹)',
-                    data: {{ chart_revenue|safe }},
+                    data: chartRevenue,
                     borderColor: '#6366f1',
                     backgroundColor: 'rgba(99, 102, 241, 0.1)',
                     fill: true,
@@ -374,10 +383,10 @@
         new Chart(ctxProd, {
             type: 'bar',
             data: {
-                labels: {{ chart_products|safe }},
+                labels: chartProducts,
                 datasets: [{
                     label: 'Qty Sold',
-                    data: {{ chart_product_qtys|safe }},
+                    data: chartProductQtys,
                     backgroundColor: ['#4f46e5', '#10b981', '#f59e0b', '#f43f5e', '#a855f7'],
                     borderRadius: 8,
                     borderWidth: 0
