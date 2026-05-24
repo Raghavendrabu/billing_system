@@ -343,10 +343,10 @@
         new Chart(ctxRev, {
             type: 'line',
             data: {
-                labels: ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'],
+                labels: {{ chart_months|safe }},
                 datasets: [{
                     label: 'Revenue (₹)',
-                    data: [154200, 182100, 169300, 214500, 225830, 248900],
+                    data: {{ chart_revenue|safe }},
                     borderColor: '#6366f1',
                     backgroundColor: 'rgba(99, 102, 241, 0.1)',
                     fill: true,
@@ -374,10 +374,10 @@
         new Chart(ctxProd, {
             type: 'bar',
             data: {
-                labels: ['Product A', 'Product B', 'Product C', 'Product D', 'Product E'],
+                labels: {{ chart_products|safe }},
                 datasets: [{
                     label: 'Qty Sold',
-                    data: [420, 310, 280, 210, 185],
+                    data: {{ chart_product_qtys|safe }},
                     backgroundColor: ['#4f46e5', '#10b981', '#f59e0b', '#f43f5e', '#a855f7'],
                     borderRadius: 8,
                     borderWidth: 0

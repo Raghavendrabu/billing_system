@@ -1,4 +1,6 @@
 import io
+import datetime
+import calendar
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, FileResponse
 from django.db import transaction
@@ -45,6 +47,54 @@ def dashboard_view(request):
     products = Product.objects.filter(is_active=True, current_stock__gt=0)
     customers = Customer.objects.all().order_by('name')
     
+    # Dynamic Line Chart: Last 6 Months Revenue
+    today = timezone.now()
+    chart_months = []
+    chart_revenue = []
+    
+    for i in range(5, -1, -1):
+        # target_date is roughly (i*30) days ago
+        target_date = today - datetime.timedelta(days=i*30)
+        year = target_date.year
+        month = target_date.month
+        
+        # Calculate start and end of target month
+        month_start = timezone.make_aware(datetime.datetime(year, month, 1))
+        _, last_day = calendar.monthrange(year, month)
+        month_end = timezone.make_aware(datetime.datetime(year, month, last_day, 23, 59, 59, 999999))
+        
+        # Total revenue for this month
+        month_rev = Invoice.objects.filter(
+            payment_status='Paid',
+            created_at__gte=month_start,
+            created_at__lte=month_end
+        ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0.00
+        
+        month_name = calendar.month_abbr[month]
+        chart_months.append(month_name)
+        chart_revenue.append(float(month_rev))
+        
+    # Dynamic Bar Chart: Top 5 Selling Products by Quantity
+    top_products = (
+        InvoiceItem.objects.filter(invoice__payment_status='Paid')
+        .values('product__name')
+        .annotate(qty_sold=Sum('quantity'))
+        .order_by('-qty_sold')[:5]
+    )
+    
+    chart_products = []
+    chart_product_qtys = []
+    
+    for item in top_products:
+        prod_name = item['product__name'] or 'Unknown Product'
+        chart_products.append(prod_name)
+        chart_product_qtys.append(item['qty_sold'] or 0)
+        
+    # Pad to exactly 5 elements so layout looks rich
+    while len(chart_products) < 5:
+        chart_products.append('No Sale')
+        chart_product_qtys.append(0)
+        
     context = {
         'active_page': 'dashboard',
         'metrics': metrics,
@@ -52,7 +102,11 @@ def dashboard_view(request):
         'recent_invoices': recent_invoices,
         'alerts': alerts,
         'products': products,
-        'customers': customers
+        'customers': customers,
+        'chart_months': chart_months,
+        'chart_revenue': chart_revenue,
+        'chart_products': chart_products,
+        'chart_product_qtys': chart_product_qtys,
     }
     return render(request, 'dashboard.html', context)
 
