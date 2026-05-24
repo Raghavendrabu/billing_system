@@ -289,6 +289,50 @@ def generate_pdf_report_view(request):
     report_type = request.GET.get('report_type', 'sales')
     time_window = request.GET.get('time_window', 'all')
     
+    # Base query for invoices (used by sales and tax reports)
+    invoices = Invoice.objects.all().order_by('-created_at')
+    
+    # Set up date filter based on time_window
+    start_dt = None
+    end_dt = None
+    window_label = "Lifetime History"
+    
+    if time_window == 'today':
+        start_dt = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        end_dt = timezone.now().replace(hour=23, minute=59, second=59, microsecond=999999)
+        window_label = f"Today ({timezone.now().strftime('%Y-%m-%d')})"
+    elif time_window == 'month':
+        start_dt = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_dt = timezone.now()
+        window_label = f"Month ({timezone.now().strftime('%B %Y')})"
+    elif time_window == 'custom':
+        start_date_str = request.GET.get('start_date')
+        end_date_str = request.GET.get('end_date')
+        
+        if start_date_str:
+            try:
+                from datetime import datetime
+                naive_start = datetime.strptime(start_date_str, "%Y-%m-%d")
+                start_dt = timezone.make_aware(naive_start)
+            except Exception:
+                pass
+        if end_date_str:
+            try:
+                from datetime import datetime
+                naive_end = datetime.strptime(end_date_str, "%Y-%m-%d").replace(hour=23, minute=59, second=59, microsecond=999999)
+                end_dt = timezone.make_aware(naive_end)
+            except Exception:
+                pass
+                
+        start_label = start_date_str if start_date_str else "Beginning"
+        end_label = end_date_str if end_date_str else "Present"
+        window_label = f"Custom Range ({start_label} to {end_label})"
+        
+    if start_dt:
+        invoices = invoices.filter(created_at__gte=start_dt)
+    if end_dt:
+        invoices = invoices.filter(created_at__lte=end_dt)
+
     # Configure buffer
     buffer = io.BytesIO()
     
@@ -331,7 +375,7 @@ def generate_pdf_report_view(request):
     
     # Header Banner Block
     elements.append(Paragraph("SMART BILLING AUDITING SUITE v1.1", style_title))
-    elements.append(Paragraph(f"AUDIT TYPE: {report_type.upper()} REPORT | COMPILED DATE: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}", style_subtitle))
+    elements.append(Paragraph(f"AUDIT TYPE: {report_type.upper()} REPORT | WINDOW: {window_label.upper()} | COMPILED DATE: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}", style_subtitle))
     elements.append(Spacer(1, 15))
     
     # Table styles variables
@@ -341,7 +385,7 @@ def generate_pdf_report_view(request):
     
     if report_type == 'sales':
         # Compile Sales Report
-        invoices = Invoice.objects.all().order_by('-created_at')
+        invoices = invoices.order_by('-created_at')
         total_revenue = invoices.aggregate(Sum('total_amount'))['total_amount__sum'] or 0.00
         avg_basket = invoices.aggregate(Avg('total_amount'))['total_amount__avg'] or 0.00
         tax_total = invoices.aggregate(Sum('tax_amount'))['tax_amount__sum'] or 0.00
@@ -485,7 +529,7 @@ def generate_pdf_report_view(request):
         elements.append(t)
         
     elif report_type == 'tax':
-        invoices = Invoice.objects.filter(payment_status='Paid')
+        invoices = invoices.filter(payment_status='Paid')
         total_subtotal = invoices.aggregate(Sum('subtotal'))['subtotal__sum'] or 0.00
         total_tax = invoices.aggregate(Sum('tax_amount'))['tax_amount__sum'] or 0.00
         total_gross = invoices.aggregate(Sum('total_amount'))['total_amount__sum'] or 0.00
